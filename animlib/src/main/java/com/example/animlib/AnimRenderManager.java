@@ -106,9 +106,9 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                                 }
                                 mStartTime = System.currentTimeMillis();
                                 if (onRender(canvas)) {
-                                    goOnRender();
+                                    skip();
                                 } else {
-                                    completeRender();
+                                    onComplete();
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -126,11 +126,11 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         }
     }
 
-    private void completeRender() {
+    private void onComplete() {
         mStartTime = 0;
     }
 
-    private void goOnRender() {
+    private void skip() {
         mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
     }
 
