@@ -7,24 +7,29 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceHolder;
 
+import com.example.animlib.annotations.Ascription;
+import com.example.animlib.runnables.LoadResRunnable;
 import com.example.animlib.view.AnimSurfaceView;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static android.content.ContentValues.TAG;
 
 /**
  * Created by Administrator on 2017/3/22.
  */
 
 public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
-    private static final byte FLAG_ANIM_START = 1;
-    private static final byte FLAG_ANIM_PAUSE = 2;
-    private static final byte FLAG_ANIM_STOP = 3;
-    private static final byte FLAG_ANIM_RUN = 4;
-    private static final byte FLAG_SCREEN_CHANGED = 5;
+    public static final byte FLAG_ANIM_START = 1;
+    public static final byte FLAG_ANIM_PAUSE = 2;
+    public static final byte FLAG_ANIM_STOP = 3;
+    public static final byte FLAG_ANIM_RUN = 4;
+    public static final byte FLAG_SCREEN_CHANGED = 5;
 
     /**
      * SurfaceView 的有效区域
@@ -35,6 +40,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     protected HandlerThread mDispatchThread;
     protected Handler mDispatchHandler;
     private ExecutorService mRenderThread;
+    private ExecutorService mLoadResThread;
     protected int mRenderDelay;
     protected long mStartTime;
     protected boolean mIsRender;
@@ -70,6 +76,9 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         if (mRenderThread != null) {
             mRenderThread.shutdownNow();
         }
+        if (mLoadResThread != null) {
+            mLoadResThread.shutdownNow();
+        }
         if (mDispatchHandler != null) {
             mDispatchHandler.removeCallbacksAndMessages(null);
         }
@@ -80,6 +89,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
 
     private void initDispatchThread() {
         mRenderThread = Executors.newSingleThreadExecutor();
+        mLoadResThread = Executors.newSingleThreadExecutor();
         mDispatchThread = new HandlerThread("DispatchThread");
         mDispatchHandler = new Handler(mDispatchThread.getLooper()) {
             @Override
@@ -194,6 +204,36 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     }
 
     private void skip() {
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
+    }
+
+    public void addScenes(AnimScene[] scenes) {
+        mLoadResThread.submit(new LoadResRunnable(scenes));
+        AnimFrame animFrame = null;
+        Ascription ascription = scenes[0].getClass().getAnnotation(Ascription.class);
+        if (ascription == null) {
+            Log.e(TAG, "AnimScene Unregistered AnimFrame !!!");
+            return;
+        }
+        String value = ascription.value();
+        try {
+            Class<?> clazz = Class.forName(value);
+            int hashCode = clazz.hashCode();
+            animFrame = mFrameCacheArray.get(hashCode);
+            if (animFrame == null) {
+                animFrame = (AnimFrame) clazz.newInstance();
+                animFrame.initLocalRect(mLocalRect);
+                mFrameCacheArray.append(hashCode, animFrame);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (animFrame == null) {
+            Log.e("TAG", "AnimScene Unregistered AnimFrame !!!");
+            return;
+        }
+        animFrame.addAnimScenes(scenes);
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
         mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
     }
 }

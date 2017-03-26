@@ -37,6 +37,10 @@ public abstract class AnimScene<C extends AnimParameter> implements IRender {
         return false;
     }
 
+    public void stopRender() {
+        mMaxFrameCount = mCurrentFrameIndex;
+    }
+
     /**
      * 帧控制
      *
@@ -52,9 +56,9 @@ public abstract class AnimScene<C extends AnimParameter> implements IRender {
 
     protected abstract void onDraw(Canvas canvas);
 
-    protected abstract void loadLocalDatas();
+    public abstract void loadLocalDatas();
 
-    protected abstract void loadNetworkDatas();
+    public abstract void loadNetworkDatas();
 
     protected C getParameter() {
         return mAnimParameter;
