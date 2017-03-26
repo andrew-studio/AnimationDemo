@@ -177,6 +177,9 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         for (int index = 0; index < frameCacheSize; index++) {
             AnimFrame animFrame = mFrameCacheArray.valueAt(index);
             boolean isContinue = animFrame.onRender(canvas);
+            if (!isContinue) {
+                animFrame.cleanCacheScenes();
+            }
             renderFinished = isContinue || renderFinished;
         }
         return renderFinished;
