@@ -7,12 +7,11 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.util.SparseArray;
 import android.view.SurfaceHolder;
 
 import com.example.animlib.view.AnimSurfaceView;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -24,7 +23,8 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     private static final byte FLAG_ANIM_START = 1;
     private static final byte FLAG_ANIM_PAUSE = 2;
     private static final byte FLAG_ANIM_STOP = 3;
-    private static final byte FLAG_SCREEN_CHANGED = 4;
+    private static final byte FLAG_ANIM_RUN = 4;
+    private static final byte FLAG_SCREEN_CHANGED = 5;
 
     /**
      * SurfaceView 的有效区域
@@ -38,8 +38,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     protected int mRenderDelay;
     protected long mStartTime;
     protected boolean mIsRender;
-    protected List<AnimFrame> mFrameCacheList = new ArrayList<>();
-    protected List<AnimFrame> mFrameRenderFinishList = new ArrayList<>();
+    protected SparseArray<AnimFrame> mFrameCacheArray = new SparseArray<>();
 
     public void setRenderState(boolean mIsRender) {
         this.mIsRender = mIsRender;
@@ -89,10 +88,10 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                     case FLAG_SCREEN_CHANGED:
                         setRenderState(false);
                         surfaceSizeChanged();
+                        setRenderState(true);
                         break;
                     case FLAG_ANIM_START:
                         setRenderState(true);
-                        mRenderThread.submit(AnimRenderManager.this);
                         break;
                     case FLAG_ANIM_PAUSE:
                         setRenderState(false);
@@ -103,6 +102,9 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                             cleanAnimQueue();
                         }
                         break;
+                    case FLAG_ANIM_RUN:
+                        mRenderThread.submit(AnimRenderManager.this);
+                        break;
                 }
             }
         };
@@ -111,13 +113,18 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
 
     private void surfaceSizeChanged() {
         if (mSurfaceView != null) {
-            mLocalRect.set(mSurfaceView.getLeft(), mSurfaceView.getTop(), mSurfaceView.getRight(), mSurfaceView.getBottom());
+            mLocalRect.set(
+                    mSurfaceView.getLeft()
+                    , mSurfaceView.getTop()
+                    , mSurfaceView.getRight()
+                    , mSurfaceView.getBottom());
         }
-        if (mFrameCacheList.size() > 0) {
-            for (AnimFrame animFrame : mFrameCacheList) {
+        if (mFrameCacheArray.size() > 0) {
+            int frameCacheSize = mFrameCacheArray.size();
+            for (int index = 0; index < frameCacheSize; index++) {
+                AnimFrame animFrame = mFrameCacheArray.valueAt(index);
                 animFrame.surfaceSizeChanged(mLocalRect);
             }
-            setRenderState(true);
         }
     }
 
@@ -166,29 +173,17 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
 
     public boolean onRender(Canvas canvas) {
         boolean renderFinished = false;
-        synchronized (mDispatchThread) {
-            int frameCacheSize = mFrameCacheList.size();
-            for (int index = 0; index < frameCacheSize; index++) {
-                AnimFrame animFrame = mFrameCacheList.get(index);
-                boolean isContinue = animFrame.onRender(canvas);
-                if (!isContinue) {
-                    mFrameRenderFinishList.add(animFrame);
-                }
-                renderFinished = isContinue || renderFinished;
-            }
-            if (mFrameRenderFinishList.size() != 0) {
-                mFrameCacheList.removeAll(mFrameRenderFinishList);
-                mFrameRenderFinishList.clear();
-            }
-            if (renderFinished) {
-                cleanAnimQueue();
-            }
+        int frameCacheSize = mFrameCacheArray.size();
+        for (int index = 0; index < frameCacheSize; index++) {
+            AnimFrame animFrame = mFrameCacheArray.valueAt(index);
+            boolean isContinue = animFrame.onRender(canvas);
+            renderFinished = isContinue || renderFinished;
         }
         return renderFinished;
     }
 
     private void cleanAnimQueue() {
-        mFrameCacheList.clear();
+        mFrameCacheArray.clear();
     }
 
     private void onComplete() {
@@ -196,6 +191,6 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     }
 
     private void skip() {
-        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
     }
 }
