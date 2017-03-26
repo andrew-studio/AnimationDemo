@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 public class AnimController {
     private String TAG = AnimController.class.getSimpleName();
     private AnimRenderManager mRenderManager;
-    private int fps = 31; // 帧率
+    private int fps = 30; // 帧率
     private int renderDelay = 1000 / fps;
     private ExecutorService mLoadSceneThread;
 
@@ -53,7 +53,7 @@ public class AnimController {
                 return;
             }
             AnimScene[] scenes = mSceneCreater.createScenes(object);
-            if (scenes == null || scenes.length > 0) {
+            if (scenes == null || scenes.length == 0) {
                 Log.e(TAG, "LoadSceneRunnable NoAnimScene!!!");
                 return;
             }

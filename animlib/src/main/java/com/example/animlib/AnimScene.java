@@ -33,6 +33,7 @@ public abstract class AnimScene<C extends AnimParameter> implements IRender {
         if (frameControl(mCurrentFrameIndex)) {
             onDraw(canvas);
             mCurrentFrameIndex++;
+            return true;
         }
         return false;
     }

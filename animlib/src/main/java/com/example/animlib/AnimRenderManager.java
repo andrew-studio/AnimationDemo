@@ -13,6 +13,7 @@ import android.view.SurfaceHolder;
 
 import com.example.animlib.annotations.Ascription;
 import com.example.animlib.runnables.LoadResRunnable;
+import com.example.animlib.utils.FrameRateUtil;
 import com.example.animlib.view.AnimSurfaceView;
 
 import java.util.concurrent.ExecutorService;
@@ -91,6 +92,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         mRenderThread = Executors.newSingleThreadExecutor();
         mLoadResThread = Executors.newSingleThreadExecutor();
         mDispatchThread = new HandlerThread("DispatchThread");
+        mDispatchThread.start();
         mDispatchHandler = new Handler(mDispatchThread.getLooper()) {
             @Override
             public void handleMessage(Message msg) {
@@ -118,7 +120,6 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                 }
             }
         };
-        mDispatchThread.start();
     }
 
     private void surfaceSizeChanged() {
@@ -158,6 +159,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                                 }
                                 mStartTime = System.currentTimeMillis();
                                 // 还有在draw方法中绘制背景颜色的时候以下面的方式进行绘制就可以实现SurfaceView的背景透明化
+//                                FrameRateUtil.printFps();
                                 canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                                 if (onRender(canvas)) {
                                     skip();

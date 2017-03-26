@@ -49,6 +49,7 @@ public abstract class AnimFrame<T extends AnimScene> implements IRender {
         int renderingCacheSize = mRenderingCacheList.size();
         for (int index = 0; index < renderingCacheSize; index++) {
             T renderingScene = mRenderingCacheList.get(index);
+            renderingScene.surfaceSizeChanged(mLocalRect);
             boolean isContinueTemp = renderingScene.onRender(canvas);
             if (!isContinueTemp) {
                 mCleanCacheList.add(renderingScene);
