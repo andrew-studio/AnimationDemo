@@ -6,7 +6,7 @@ import android.graphics.Rect;
 import com.example.animlib.interfaces.IRender;
 
 /**
- * Created by Android on 2017/3/23.
+ * Created by zhenliang on 2017/3/23.
  */
 public abstract class AnimScene<C extends AnimParameter> implements IRender {
     protected Rect mLocalRect;

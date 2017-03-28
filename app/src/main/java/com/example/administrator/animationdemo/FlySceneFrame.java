@@ -8,6 +8,6 @@ import com.example.animlib.AnimFrame;
 public class FlySceneFrame extends AnimFrame<FlyScene> {
 	@Override
 	protected int initMaxScene() {
-		return 1;
+		return 3;
 	}
 }

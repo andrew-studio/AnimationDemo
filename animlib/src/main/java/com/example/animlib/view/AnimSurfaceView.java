@@ -9,7 +9,7 @@ import android.util.AttributeSet;
 import android.view.SurfaceView;
 
 /**
- * Created by Administrator on 2017/3/22.
+ * Created by zhenliang on 2017/3/22.
  */
 
 public class AnimSurfaceView extends SurfaceView {

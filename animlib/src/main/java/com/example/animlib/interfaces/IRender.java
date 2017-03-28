@@ -4,7 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 
 /**
- * Created by Android on 2017/3/23.
+ * Created by zhenliang on 2017/3/23.
  */
 public interface IRender {
     /**

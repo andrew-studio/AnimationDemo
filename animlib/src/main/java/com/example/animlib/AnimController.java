@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Created by Administrator on 2017/3/22.
+ * Created by zhenliang on 2017/3/22.
  */
 
 public class AnimController {

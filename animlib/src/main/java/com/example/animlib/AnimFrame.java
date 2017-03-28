@@ -12,7 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Created by Android on 2017/3/23.
+ * Created by zhenliang on 2017/3/23.
  */
 public abstract class AnimFrame<T extends AnimScene> implements IRender {
     private int mMaxScene;
@@ -44,7 +44,6 @@ public abstract class AnimFrame<T extends AnimScene> implements IRender {
                 && mRenderingCacheList.size() == 0) {
             return false;
         }
-        boolean isContinue = false;
         fillRenderingScene();
         int renderingCacheSize = mRenderingCacheList.size();
         for (int index = 0; index < renderingCacheSize; index++) {
@@ -54,10 +53,9 @@ public abstract class AnimFrame<T extends AnimScene> implements IRender {
             if (!isContinueTemp) {
                 mCleanCacheList.add(renderingScene);
             }
-            isContinue = isContinueTemp || isContinue;
         }
         mRenderingCacheList.removeAll(mCleanCacheList);
-        return isContinue;
+        return !(mSceneCacheList.size() == 0 && mRenderingCacheList.size() == 0);
     }
 
     private void fillRenderingScene() {
@@ -90,10 +88,6 @@ public abstract class AnimFrame<T extends AnimScene> implements IRender {
 
     protected synchronized void addAnimScenes(T[] animScenes) {
         mSceneCacheList.addAll(Arrays.asList(animScenes));
-    }
-
-    protected synchronized void removeAnimScenes(List<T> animScenes) {
-        mSceneCacheList.removeAll(animScenes);
     }
 
     protected synchronized void cleanAnimScenes() {

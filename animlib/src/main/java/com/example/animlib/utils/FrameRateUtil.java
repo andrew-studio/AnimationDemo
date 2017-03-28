@@ -4,7 +4,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 /**
- * Created by Android on 2017/3/23.
+ * Created by zhenliang on 2017/3/23.
  */
 public class FrameRateUtil {
     private static final String TAG = FrameRateUtil.class.getSimpleName();
@@ -26,6 +26,6 @@ public class FrameRateUtil {
     }
 
     public static void printFps() {
-        Log.e(TAG, String.valueOf(getFps()));
+        Log.e(TAG, "Fps(" + String.valueOf(getFps()) + ")");
     }
 }

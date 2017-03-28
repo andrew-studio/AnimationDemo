@@ -1,7 +1,7 @@
 package com.example.animlib.utils;
 
 /**
- * Created by Android on 2017/3/23.
+ * Created by zhenliang on 2017/3/23.
  */
 public class ResUtil {
     private volatile static ResUtil instans;

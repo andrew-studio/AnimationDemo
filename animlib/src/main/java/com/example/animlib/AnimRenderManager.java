@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 import static android.content.ContentValues.TAG;
 
 /**
- * Created by Administrator on 2017/3/22.
+ * Created by zhenliang on 2017/3/22.
  */
 
 public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
@@ -159,7 +159,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
                                 }
                                 mStartTime = System.currentTimeMillis();
                                 // 还有在draw方法中绘制背景颜色的时候以下面的方式进行绘制就可以实现SurfaceView的背景透明化
-//                                FrameRateUtil.printFps();
+                                FrameRateUtil.printFps();
                                 canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                                 if (onRender(canvas)) {
                                     skip();
@@ -184,7 +184,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     }
 
     public boolean onRender(Canvas canvas) {
-        boolean renderFinished = false;
+        boolean continueRender = false;
         int frameCacheSize = mFrameCacheArray.size();
         for (int index = 0; index < frameCacheSize; index++) {
             AnimFrame animFrame = mFrameCacheArray.valueAt(index);
@@ -192,9 +192,9 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
             if (!isContinue) {
                 animFrame.cleanCacheScenes();
             }
-            renderFinished = isContinue || renderFinished;
+            continueRender = isContinue || continueRender;
         }
-        return renderFinished;
+        return continueRender;
     }
 
     private void cleanAnimQueue() {
@@ -203,6 +203,7 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
 
     private void onComplete() {
         mStartTime = 0;
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_PAUSE);
     }
 
     private void skip() {
