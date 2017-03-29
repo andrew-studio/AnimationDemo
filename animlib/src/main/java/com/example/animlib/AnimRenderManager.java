@@ -239,4 +239,8 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
         mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
     }
+
+    public void setRenderDelay(int renderDelay) {
+        mRenderDelay = renderDelay;
+    }
 }

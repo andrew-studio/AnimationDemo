@@ -1,13 +1,10 @@
 package com.example.administrator.animationdemo;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.View;
+import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
 import com.example.animlib.AnimController;
-import com.example.animlib.AnimScene;
-import com.example.animlib.interfaces.IAnimSceneCreater;
 import com.example.animlib.view.AnimSurfaceView;
 
 public class MainActivity extends AppCompatActivity {
@@ -27,16 +24,5 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initListener() {
-        addButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                animController.addScene("", new IAnimSceneCreater() {
-                    @Override
-                    public AnimScene[] createScenes(Object object) {
-                        return new AnimScene[]{new FlyScene(new FlySceneParameter())};
-                    }
-                });
-            }
-        });
     }
 }

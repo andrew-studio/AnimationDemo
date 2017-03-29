@@ -31,6 +31,10 @@ public class AnimController {
 
     public void setFps(int fps) {
         this.fps = fps;
+        this.renderDelay = 1000 / fps;
+        if (mRenderManager != null) {
+            mRenderManager.setRenderDelay(renderDelay);
+        }
     }
 
     public void addScene(Object o, IAnimSceneCreater sceneCreater) {
