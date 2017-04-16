@@ -2,12 +2,9 @@ package com.example.animlib;
 
 import android.util.Log;
 
+import com.example.animlib.entity.AnimScene;
 import com.example.animlib.interfaces.IAnimSceneCreater;
-import com.example.animlib.runnables.LoadResRunnable;
-import com.example.animlib.view.AnimSurfaceView;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.example.animlib.view.BaseSurfaceView;
 
 /**
  * Created by zhenliang on 2017/3/22.
@@ -18,11 +15,11 @@ public class AnimController {
     private AnimRenderManager mRenderManager;
     private int fps = 30; // 帧率
     private int renderDelay = 1000 / fps;
-    private ExecutorService mLoadSceneThread;
+    private AnimThreadManager mThreadManager;
 
-    public AnimController(AnimSurfaceView surfaceView) {
-        mRenderManager = new AnimRenderManager(surfaceView, renderDelay);
-        mLoadSceneThread = Executors.newSingleThreadExecutor();
+    public AnimController(BaseSurfaceView surfaceView) {
+        mThreadManager=new AnimThreadManager();
+        mRenderManager = new AnimRenderManager(surfaceView, renderDelay,mThreadManager);
     }
 
     public int getFps() {
@@ -38,7 +35,7 @@ public class AnimController {
     }
 
     public void addScene(Object o, IAnimSceneCreater sceneCreater) {
-        mLoadSceneThread.submit(new LoadSceneRunnable(o, sceneCreater));
+        mThreadManager.getLoadLocalRunnableThread().submit(new LoadSceneRunnable(o, sceneCreater));
     }
 
     public class LoadSceneRunnable implements Runnable {

@@ -1,6 +1,6 @@
 package com.example.animlib.runnables;
 
-import com.example.animlib.AnimScene;
+import com.example.animlib.entity.AnimScene;
 
 /**
  * Created by zhenliang on 2017/3/26.

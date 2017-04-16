@@ -12,31 +12,27 @@ import android.view.SurfaceView;
  * Created by zhenliang on 2017/3/22.
  */
 
-public class AnimSurfaceView extends SurfaceView {
+public class AnimSurfaceView extends BaseSurfaceView {
     public AnimSurfaceView(Context context) {
         super(context);
-        init();
     }
 
     public AnimSurfaceView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
     }
 
     public AnimSurfaceView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public AnimSurfaceView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-        init();
-    }
-
-    private void init() {
-        // 设置画布背景不为黑色 继承Sureface时这样处理才能透明
+    @Override
+    protected void setZOrderMode() {
         setZOrderOnTop(true);
+    }
+
+    @Override
+    protected void setSurfaceViewBackground() {
+        // 设置画布背景不为黑色 继承Sureface时这样处理才能透明
         getHolder().setFormat(PixelFormat.TRANSLUCENT);
         setBackgroundColor(Color.TRANSPARENT);
     }

@@ -5,53 +5,48 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceHolder;
 
 import com.example.animlib.annotations.Ascription;
+import com.example.animlib.entity.AnimFrame;
+import com.example.animlib.entity.AnimScene;
 import com.example.animlib.runnables.LoadResRunnable;
 import com.example.animlib.utils.FrameRateUtil;
-import com.example.animlib.view.AnimSurfaceView;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static android.content.ContentValues.TAG;
+import com.example.animlib.view.BaseSurfaceView;
 
 /**
  * Created by zhenliang on 2017/3/22.
  */
 
 public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
+    public static final String TAG = AnimRenderManager.class.getSimpleName();
+    public static final byte FLAG_ANIM_STOP = 2;
     public static final byte FLAG_ANIM_START = 1;
-    public static final byte FLAG_ANIM_PAUSE = 2;
-    public static final byte FLAG_ANIM_STOP = 3;
-    public static final byte FLAG_ANIM_RUN = 4;
-    public static final byte FLAG_SCREEN_CHANGED = 5;
+    public static final byte FLAG_SCREEN_CHANGED = 3;
 
     /**
      * SurfaceView 的有效区域
      */
     protected Rect mLocalRect = new Rect();
-    protected AnimSurfaceView mSurfaceView;
+    protected BaseSurfaceView mSurfaceView;
     protected SurfaceHolder mSurfaceHolder;
-    protected HandlerThread mDispatchThread;
     protected Handler mDispatchHandler;
-    private ExecutorService mRenderThread;
-    private ExecutorService mLoadResThread;
     protected int mRenderDelay;
     protected long mStartTime;
     protected boolean mIsRender;
+    protected Object mSurfaceChangeinglock = new Object();
+    protected AnimThreadManager mThreadManager;
     protected SparseArray<AnimFrame> mFrameCacheArray = new SparseArray<>();
 
     public void setRenderState(boolean mIsRender) {
         this.mIsRender = mIsRender;
     }
 
-    public AnimRenderManager(AnimSurfaceView surfaceView, int renderDelay) {
+    public AnimRenderManager(BaseSurfaceView surfaceView, int renderDelay, AnimThreadManager threadManager) {
+        mThreadManager = threadManager;
         mSurfaceView = surfaceView;
         mRenderDelay = renderDelay;
         init();
@@ -64,58 +59,46 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        initDispatchThread();
+        Log.e(TAG, "surfaceCreated");
+        initDispatchHandler();
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        Log.e(TAG, "surfaceChanged");
         mDispatchHandler.sendEmptyMessage(FLAG_SCREEN_CHANGED);
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        if (mRenderThread != null) {
-            mRenderThread.shutdownNow();
-        }
-        if (mLoadResThread != null) {
-            mLoadResThread.shutdownNow();
-        }
+        Log.e(TAG, "surfaceDestroyed");
         if (mDispatchHandler != null) {
             mDispatchHandler.removeCallbacksAndMessages(null);
         }
-        if (mDispatchThread != null) {
-            mDispatchThread.quit();
-        }
+        mThreadManager.stopDispatchThead();
     }
 
-    private void initDispatchThread() {
-        mRenderThread = Executors.newSingleThreadExecutor();
-        mLoadResThread = Executors.newSingleThreadExecutor();
-        mDispatchThread = new HandlerThread("DispatchThread");
-        mDispatchThread.start();
-        mDispatchHandler = new Handler(mDispatchThread.getLooper()) {
+    private void initDispatchHandler() {
+        mThreadManager.createDispatchThead();
+        mDispatchHandler = new Handler(mThreadManager.getDispatchRunnableThread().getLooper()) {
             @Override
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case FLAG_SCREEN_CHANGED:
-                        setRenderState(false);
-                        surfaceSizeChanged();
-                        setRenderState(true);
-                        break;
-                    case FLAG_ANIM_START:
-                        setRenderState(true);
-                        break;
-                    case FLAG_ANIM_PAUSE:
-                        setRenderState(false);
+                        synchronized (mSurfaceChangeinglock) {
+                            setRenderState(false);
+                            surfaceSizeChanged();
+                            setRenderState(true);
+                        }
                         break;
                     case FLAG_ANIM_STOP:
                         setRenderState(false);
-                        synchronized (mDispatchThread) {
+                        synchronized (mSurfaceChangeinglock) {
                             cleanAnimQueue();
                         }
                         break;
-                    case FLAG_ANIM_RUN:
-                        mRenderThread.submit(AnimRenderManager.this);
+                    case FLAG_ANIM_START:
+                        mThreadManager.getRenderThread().execute(AnimRenderManager.this);
                         break;
                 }
             }
@@ -144,43 +127,44 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
         if (!mIsRender) {
             return;
         }
-        if (mSurfaceHolder != null) {
-            synchronized (mSurfaceHolder) {
-                try {
-                    if (mSurfaceHolder != null
-                            && mSurfaceHolder.getSurface().isValid()) {
-                        Canvas canvas = mSurfaceHolder.lockCanvas();
-                        if (canvas != null) {
-                            try {
-                                if (mStartTime != 0) {
-                                    while (System.currentTimeMillis() - mStartTime < mRenderDelay) {
-                                        Thread.yield();
-                                    }
-                                }
-                                mStartTime = System.currentTimeMillis();
-                                // 还有在draw方法中绘制背景颜色的时候以下面的方式进行绘制就可以实现SurfaceView的背景透明化
-                                FrameRateUtil.printFps();
-                                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                                if (onRender(canvas)) {
-                                    skip();
-                                } else {
-                                    onComplete();
-                                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            } finally {
-                                if (mSurfaceHolder != null && canvas != null) {
-                                    mSurfaceHolder.unlockCanvasAndPost(canvas);
-                                }
+        try {
+            if (mSurfaceHolder != null
+                    && mSurfaceHolder.getSurface().isValid()) {
+                Canvas canvas = mSurfaceHolder.lockCanvas();
+                if (canvas != null) {
+                    try {
+                        FrameRateUtil.printFps();
+                        if (mStartTime != 0) {
+                            while (System.currentTimeMillis() - mStartTime < mRenderDelay) {
+                                Thread.yield();
                             }
                         }
+                        mStartTime = System.currentTimeMillis();
+                        cleanSurfaceBackground(canvas);
+                        if (onRender(canvas)) {
+                            skip();
+                        } else {
+                            onComplete();
+                            cleanSurfaceBackground(canvas);
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, e.toString());
+                    } finally {
+                        if (mSurfaceHolder != null && canvas != null) {
+
+                            mSurfaceHolder.unlockCanvasAndPost(canvas);
+                        }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private void cleanSurfaceBackground(Canvas canvas) {
+        // 还有在draw方法中绘制背景颜色的时候以下面的方式进行绘制就可以实现SurfaceView的背景透明化
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
     }
 
     public boolean onRender(Canvas canvas) {
@@ -198,46 +182,51 @@ public class AnimRenderManager implements SurfaceHolder.Callback, Runnable {
     }
 
     private void cleanAnimQueue() {
-        mFrameCacheArray.clear();
+        int frameCacheSize = mFrameCacheArray.size();
+        for (int index = 0; index < frameCacheSize; index++) {
+            mFrameCacheArray.valueAt(index).cleanAnimScenes();
+        }
     }
 
     private void onComplete() {
         mStartTime = 0;
-        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_PAUSE);
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_STOP);
     }
 
     private void skip() {
-        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
+        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
     }
 
     public void addScenes(AnimScene[] scenes) {
-        mLoadResThread.submit(new LoadResRunnable(scenes));
         AnimFrame animFrame = null;
         Ascription ascription = scenes[0].getClass().getAnnotation(Ascription.class);
         if (ascription == null) {
             Log.e(TAG, "AnimScene Unregistered AnimFrame !!!");
             return;
         }
+        mThreadManager.getLoadResThreads().execute(new LoadResRunnable(scenes));
         String value = ascription.value();
-        try {
-            Class<?> clazz = Class.forName(value);
-            int hashCode = clazz.hashCode();
-            animFrame = mFrameCacheArray.get(hashCode);
-            if (animFrame == null) {
-                animFrame = (AnimFrame) clazz.newInstance();
-                animFrame.initLocalRect(mLocalRect);
-                mFrameCacheArray.append(hashCode, animFrame);
+        synchronized (mSurfaceChangeinglock) {
+            try {
+                Class<?> clazz = Class.forName(value);
+                int hashCode = clazz.hashCode();
+                animFrame = mFrameCacheArray.get(hashCode);
+                if (animFrame == null) {
+                    animFrame = (AnimFrame) clazz.newInstance();
+                    animFrame.initLocalRect(mLocalRect);
+                    mFrameCacheArray.append(hashCode, animFrame);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (animFrame == null) {
+                Log.e("TAG", "AnimScene Unregistered AnimFrame !!!");
+                return;
+            }
+            animFrame.addAnimScenes(scenes);
+            setRenderState(true);
+            mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
         }
-        if (animFrame == null) {
-            Log.e("TAG", "AnimScene Unregistered AnimFrame !!!");
-            return;
-        }
-        animFrame.addAnimScenes(scenes);
-        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_START);
-        mDispatchHandler.sendEmptyMessage(FLAG_ANIM_RUN);
     }
 
     public void setRenderDelay(int renderDelay) {
